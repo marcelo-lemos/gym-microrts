@@ -163,6 +163,10 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 class Agent(nn.Module):
     def __init__(self, envs, mapsize=16 * 16):
         super(Agent, self).__init__()
+
+        self.sticky_duration = 10
+        self.sticky_time_remaining = 0
+
         self.mapsize = mapsize
         h, w, c = envs.observation_space.shape
         self.encoder = nn.Sequential(
@@ -204,14 +208,24 @@ class Agent(nn.Module):
         split_logits = torch.split(grid_logits, envs.action_plane_space.nvec.tolist(), dim=1)
 
         if action is None:
-            # invalid_action_masks = torch.tensor(np.array(envs.vec_client.getMasks(0))).to(device)
-            invalid_action_masks = invalid_action_masks.view(-1, invalid_action_masks.shape[-1])
-            split_invalid_action_masks = torch.split(invalid_action_masks, envs.action_plane_space.nvec.tolist(), dim=1)
-            multi_categoricals = [
-                CategoricalMasked(logits=logits, masks=iam, device=device)
-                for (logits, iam) in zip(split_logits, split_invalid_action_masks)
-            ]
-            action = torch.stack([categorical.sample() for categorical in multi_categoricals])
+            if self.sticky_time_remaining <= 0:
+                self.sticky_time_remaining = self.sticky_duration
+                # invalid_action_masks = torch.tensor(np.array(envs.vec_client.getMasks(0))).to(device)
+                invalid_action_masks = invalid_action_masks.view(-1, invalid_action_masks.shape[-1])
+                split_invalid_action_masks = torch.split(invalid_action_masks, envs.action_plane_space.nvec.tolist(), dim=1)
+                multi_categoricals = [
+                    CategoricalMasked(logits=logits, masks=iam, device=device)
+                    for (logits, iam) in zip(split_logits, split_invalid_action_masks)
+                ]
+                self.last_multi_categoricals = multi_categoricals
+                action = torch.stack([categorical.sample() for categorical in multi_categoricals])
+                self.last_action = action
+                
+            else:
+                self.sticky_time_remaining -= 1
+                action = self.last_action
+                multi_categoricals = self.last_multi_categoricals
+            
         else:
             invalid_action_masks = invalid_action_masks.view(-1, invalid_action_masks.shape[-1])
             action = action.view(-1, action.shape[-1]).T
