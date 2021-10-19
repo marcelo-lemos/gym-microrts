@@ -83,6 +83,8 @@ def parse_args():
         help="Toggle learning rate annealing for policy and value networks")
     parser.add_argument('--clip-vloss', type=lambda x: bool(strtobool(x)), default=True, nargs='?', const=True,
         help='Toggles wheter or not to use a clipped loss for the value function, as per the paper.')
+    parser.add_argument('--sticky-actions-duration', type=int, default=0,
+        help='the duration of sticky actions')
 
     args = parser.parse_args()
     if not args.seed:
@@ -161,10 +163,10 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 class Agent(nn.Module):
-    def __init__(self, envs, mapsize=16 * 16):
+    def __init__(self, envs, mapsize=16 * 16, sticky_actions_duration=0):
         super(Agent, self).__init__()
 
-        self.sticky_duration = 10
+        self.sticky_duration = sticky_actions_duration
         self.sticky_time_remaining = 0
 
         self.mapsize = mapsize
@@ -296,7 +298,7 @@ if __name__ == "__main__":
         )
     assert isinstance(envs.action_space, MultiDiscrete), "only MultiDiscrete action space is supported"
 
-    agent = Agent(envs).to(device)
+    agent = Agent(envs, sticky_actions_duration=args.sticky_actions_duration).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
     if args.anneal_lr:
         # https://github.com/openai/baselines/blob/ea25b9e8b234e6ee1bca43083f8f3cf974143998/baselines/ppo2/defaults.py#L20
