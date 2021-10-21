@@ -488,5 +488,5 @@ if __name__ == "__main__":
         writer.add_scalar("charts/sps", int(global_step / (time.time() - start_time)), global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
 
-    # envs.close()
-    # writer.close()
+    envs.close()
+    writer.close()
