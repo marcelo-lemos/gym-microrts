@@ -2,7 +2,7 @@ program: experiments/new_ppo_gridnet.py
 method: grid
 parameters:
   sticky-actions-duration:
-    values: [0, 50, 100]
+    values: [0, 25, 50, 75, 100]
   prod-mode:
     value: "true"
   seed:

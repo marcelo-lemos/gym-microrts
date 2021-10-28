@@ -15,7 +15,6 @@ from gym_microrts import microrts_ai
 from gym_microrts.envs.new_vec_env import MicroRTSGridModeVecEnv
 from stable_baselines3.common.vec_env import VecEnvWrapper, VecMonitor, VecVideoRecorder
 from torch.distributions.categorical import Categorical
-from torch.utils.tensorboard import SummaryWriter
 
 
 def parse_args():
@@ -259,17 +258,12 @@ if __name__ == "__main__":
         run = wandb.init(
             project=args.wandb_project_name,
             entity=args.wandb_entity,
-            sync_tensorboard=True,
             config=vars(args),
             name=experiment_name,
             monitor_gym=True,
             save_code=True,
         )
         CHECKPOINT_FREQUENCY = 50
-    writer = SummaryWriter(f"runs/{experiment_name}")
-    writer.add_text(
-        "hyperparameters", "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()]))
-    )
 
     # TRY NOT TO MODIFY: seeding
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
@@ -355,7 +349,7 @@ if __name__ == "__main__":
 
         # TRY NOT TO MODIFY: prepare the execution of the game.
         for step in range(0, args.num_steps):
-            envs.render()
+            # envs.render()
             global_step += 1 * args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
@@ -380,9 +374,9 @@ if __name__ == "__main__":
             for info in infos:
                 if "episode" in info.keys():
                     print(f"global_step={global_step}, episode_reward={info['episode']['r']}")
-                    writer.add_scalar("charts/episode_reward", info["episode"]["r"], global_step)
+                    run.log({"charts/episode_reward": info['episode']['r']}, step=global_step)
                     for key in info["microrts_stats"]:
-                        writer.add_scalar(f"charts/episode_reward/{key}", info["microrts_stats"][key], global_step)
+                        run.log({f"rewards/{key}": info["microrts_stats"][key]}, step=global_step)
                     break
 
         # bootstrap reward if not done. reached the batch limit
@@ -477,16 +471,15 @@ if __name__ == "__main__":
                 print("model saved")
 
         # TRY NOT TO MODIFY: record rewards for plotting purposes
-        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
-        writer.add_scalar("charts/update", update, global_step)
-        writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
-        writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-        writer.add_scalar("losses/entropy", entropy.mean().item(), global_step)
-        writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+        run.log({"charts/learning_rate": optimizer.param_groups[0]["lr"]}, step=global_step)
+        run.log({"charts/update": update}, step=global_step)
+        run.log({"losses/value_loss": v_loss.item()}, step=global_step)
+        run.log({"losses/policy_loss": pg_loss.item()}, step=global_step)
+        run.log({"losses/entropy": entropy.mean().item()}, step=global_step)
+        run.log({"losses/approx_kl": approx_kl.item()}, step=global_step)
         if args.kle_stop or args.kle_rollback:
-            writer.add_scalar("debug/pg_stop_iter", i_epoch_pi, global_step)
-        writer.add_scalar("charts/sps", int(global_step / (time.time() - start_time)), global_step)
+            run.log({"debug/pg_stop_iter": i_epoch_pi}, step=global_step)
+        run.log({"charts/sps": int(global_step / (time.time() - start_time))}, step=global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
 
     envs.close()
-    writer.close()
