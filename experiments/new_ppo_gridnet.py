@@ -279,7 +279,7 @@ if __name__ == "__main__":
         render_theme=2,
         ai2s= [microrts_ai.workerRushAI for _ in range(args.num_bot_envs)],
         map_path="maps/8x8/basesWorkers8x8.xml",
-        reward_weight=np.array([10.0, 1.0, 1.0, 0.2, 1.0, 4.0]),
+        reward_weight=np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
     )
     envs = MicroRTSStatsRecorder(envs)
     envs = VecMonitor(envs)
@@ -346,7 +346,7 @@ if __name__ == "__main__":
 
         # TRY NOT TO MODIFY: prepare the execution of the game.
         for step in range(0, args.num_steps):
-            envs.render()
+            # envs.render()
             global_step += 1 * args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
