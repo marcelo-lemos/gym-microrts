@@ -162,7 +162,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 class Agent(nn.Module):
-    def __init__(self, envs, mapsize=8 * 8, sticky_actions_duration=0):
+    def __init__(self, envs, mapsize=24 * 24, sticky_actions_duration=0):
         super(Agent, self).__init__()
 
         self.sticky_duration = sticky_actions_duration
@@ -192,12 +192,12 @@ class Agent(nn.Module):
             nn.ReLU(),
             layer_init(nn.ConvTranspose2d(64, 32, 3, stride=2, padding=1, output_padding=1)),
             nn.ReLU(),
-            layer_init(nn.ConvTranspose2d(32, 78, 3, stride=1, padding=1, output_padding=0)),
+            layer_init(nn.ConvTranspose2d(32, 78, 3, stride=2, padding=5, output_padding=1)),
             Transpose((0, 2, 3, 1)),
         )
         self.critic = nn.Sequential(
             nn.Flatten(),
-            layer_init(nn.Linear(256, 128)),
+            layer_init(nn.Linear(1024, 128)),
             nn.ReLU(),
             layer_init(nn.Linear(128, 1), std=1),
         )
@@ -278,7 +278,7 @@ if __name__ == "__main__":
         max_steps=2000,
         render_theme=2,
         ai2s= [microrts_ai.workerRushAI for _ in range(args.num_bot_envs)],
-        map_path="maps/8x8/basesWorkers8x8.xml",
+        map_path="maps/24x24/basesWorkers24x24.xml",
         reward_weight=np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
     )
     envs = MicroRTSStatsRecorder(envs)
@@ -296,7 +296,7 @@ if __name__ == "__main__":
         lr = lambda f: f * args.learning_rate
 
     # ALGO Logic: Storage for epoch data
-    mapsize = 8 * 8
+    mapsize = 24 * 24
     action_space_shape = (mapsize, len(envs.action_plane_space.nvec))
     invalid_action_shape = (mapsize, envs.action_plane_space.nvec.sum())
 
