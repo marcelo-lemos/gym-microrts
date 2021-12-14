@@ -18,6 +18,10 @@ def lightRushAI(utt):
     from ai.abstraction import LightRush
     return LightRush(utt)
 
+def heavyRushAI(utt):
+    from ai.abstraction import HeavyRush
+    return HeavyRush(utt)
+
 def POLightRush(utt):
     from ai.abstraction.partialobservability import POLightRush
     return POLightRush(utt)
