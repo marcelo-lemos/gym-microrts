@@ -12,7 +12,7 @@ from gym_microrts import microrts_ai
 import jpype
 from jpype.imports import registerDomain
 import jpype.imports
-from jpype.types import JArray, JInt
+from jpype.types import JArray, JInt, JString
 
 class MicroRTSGridModeVecEnv:
     metadata = {
@@ -37,7 +37,7 @@ class MicroRTSGridModeVecEnv:
         render_theme=2,
         frame_skip=0,
         ai2s=[],
-        map_path="maps/10x10/basesTwoWorkers10x10.xml",
+        map_paths=["maps/10x10/basesTwoWorkers10x10.xml"],
         reward_weight=np.array([0.0, 1.0, 0.0, 0.0, 0.0, 5.0])):
 
         self.num_selfplay_envs = num_selfplay_envs
@@ -49,12 +49,16 @@ class MicroRTSGridModeVecEnv:
         self.render_theme = render_theme
         self.frame_skip = frame_skip
         self.ai2s = ai2s
-        self.map_path = map_path
+        self.map_paths = map_paths
+        if len(map_paths) == 1:
+            self.map_paths = [map_paths[0] for _ in range(self.num_envs)]
+        else:
+            assert len(map_paths) == self.num_envs, "if multiple maps are provided, they should be provided for each environment"
         self.reward_weight = reward_weight
 
         # read map
         self.microrts_path = os.path.join(gym_microrts.__path__[0], 'microrts')
-        root = ET.parse(os.path.join(self.microrts_path, self.map_path)).getroot()
+        root = ET.parse(os.path.join(self.microrts_path, self.map_paths[0])).getroot()
         self.height, self.width = int(root.get("height")), int(root.get("width"))
 
         # launch the JVM
@@ -73,15 +77,17 @@ class MicroRTSGridModeVecEnv:
         # start microrts client
         from rts.units import UnitTypeTable
         self.real_utt = UnitTypeTable()
-        from ai.rewardfunction import RewardFunctionInterface, WinLossRewardFunction, ResourceGatherRewardFunction, AttackRewardFunction, ProduceWorkerRewardFunction, ProduceBuildingRewardFunction, ProduceCombatUnitRewardFunction, CloserToEnemyBaseRewardFunction
+        from ai.rewardfunction import RewardFunctionInterface, WinLossRewardFunction, ResourceGatherRewardFunction, AttackRewardFunction, ProduceWorkerRewardFunction, ProduceLightRewardFunction, ProduceHeavyRewardFunction, ProduceRangedRewardFunction, ProduceBaseRewardFunction, ProduceBarracksRewardFunction
         self.rfs = JArray(RewardFunctionInterface)([
             WinLossRewardFunction(), 
             ResourceGatherRewardFunction(),  
             ProduceWorkerRewardFunction(),
-            ProduceBuildingRewardFunction(),
+            ProduceLightRewardFunction(),
+            ProduceHeavyRewardFunction(),
+            ProduceRangedRewardFunction(),
+            ProduceBaseRewardFunction(),
+            ProduceBarracksRewardFunction(),
             AttackRewardFunction(),
-            ProduceCombatUnitRewardFunction(),
-            # CloserToEnemyBaseRewardFunction(),
         ])
         self.start_client()
 
@@ -113,7 +119,7 @@ class MicroRTSGridModeVecEnv:
             self.max_steps,
             self.rfs,
             os.path.expanduser(self.microrts_path),
-            self.map_path,
+            self.map_paths,
             JArray(AI)([ai2(self.real_utt) for ai2 in self.ai2s]),
             self.real_utt,
             self.partial_obs,
@@ -213,7 +219,7 @@ class MicroRTSBotVecEnv(MicroRTSGridModeVecEnv):
         partial_obs=False,
         max_steps=2000,
         render_theme=2,
-        map_path="maps/10x10/basesTwoWorkers10x10.xml",
+        map_pahts=["maps/10x10/basesTwoWorkers10x10.xml"],
         reward_weight=np.array([0.0, 1.0, 0.0, 0.0, 0.0, 5.0])):
 
         self.ai1s = ai1s
@@ -223,12 +229,12 @@ class MicroRTSBotVecEnv(MicroRTSGridModeVecEnv):
         self.partial_obs = partial_obs
         self.max_steps = max_steps
         self.render_theme = render_theme
-        self.map_path = map_path
+        self.map_paths = map_paths
         self.reward_weight = reward_weight
 
         # read map
         self.microrts_path = os.path.join(gym_microrts.__path__[0], 'microrts')
-        root = ET.parse(os.path.join(self.microrts_path, self.map_path)).getroot()
+        root = ET.parse(os.path.join(self.microrts_path, self.map_paths[0])).getroot()
         self.height, self.width = int(root.get("height")), int(root.get("width"))
 
         # launch the JVM
@@ -247,15 +253,17 @@ class MicroRTSBotVecEnv(MicroRTSGridModeVecEnv):
         # start microrts client
         from rts.units import UnitTypeTable
         self.real_utt = UnitTypeTable()
-        from ai.rewardfunction import RewardFunctionInterface, WinLossRewardFunction, ResourceGatherRewardFunction, AttackRewardFunction, ProduceWorkerRewardFunction, ProduceBuildingRewardFunction, ProduceCombatUnitRewardFunction, CloserToEnemyBaseRewardFunction
+        from ai.rewardfunction import RewardFunctionInterface, WinLossRewardFunction, ResourceGatherRewardFunction, AttackRewardFunction, ProduceWorkerRewardFunction, ProduceLightRewardFunction, ProduceHeavyRewardFunction, ProduceRangedRewardFunction, ProduceBaseRewardFunction, ProduceBarracksRewardFunction
         self.rfs = JArray(RewardFunctionInterface)([
             WinLossRewardFunction(), 
             ResourceGatherRewardFunction(),  
             ProduceWorkerRewardFunction(),
-            ProduceBuildingRewardFunction(),
+            ProduceLightRewardFunction(),
+            ProduceHeavyRewardFunction(),
+            ProduceRangedRewardFunction(),
+            ProduceBaseRewardFunction(),
+            ProduceBarracksRewardFunction(),
             AttackRewardFunction(),
-            ProduceCombatUnitRewardFunction(),
-            # CloserToEnemyBaseRewardFunction(),
         ])
         self.start_client()
 
@@ -277,7 +285,7 @@ class MicroRTSBotVecEnv(MicroRTSGridModeVecEnv):
             self.max_steps,
             self.rfs,
             os.path.expanduser(self.microrts_path),
-            self.map_path,
+            self.map_paths,
             JArray(AI)([ai1(self.real_utt) for ai1 in self.ai1s]),
             JArray(AI)([ai2(self.real_utt) for ai2 in self.ai2s]),
             self.real_utt,
