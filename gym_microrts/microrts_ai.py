@@ -18,9 +18,21 @@ def lightRushAI(utt):
     from ai.abstraction import LightRush
     return LightRush(utt)
 
+def rangedRushAI(utt):
+    from ai.abstraction import RangedRush
+    return RangedRush(utt)
+
 def heavyRushAI(utt):
     from ai.abstraction import HeavyRush
     return HeavyRush(utt)
+
+def buildBarracks(utt):
+    from ai import BuildBarracks
+    return BuildBarracks(utt)
+
+def expand(utt):
+    from ai import Expand
+    return Expand(utt)
 
 def POLightRush(utt):
     from ai.abstraction.partialobservability import POLightRush
