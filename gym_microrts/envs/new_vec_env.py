@@ -368,6 +368,8 @@ class MicroRTSScriptVecEnv(MicroRTSGridModeVecEnv):
 
         self.num_envs = len(ai2s)
 
+        self.action_mask = np.array([1] * 6)
+
         # one script per unit per timestep
         # self.action_space = gym.spaces.MultiDiscrete([
         #     self.height * self.width, 6
@@ -415,3 +417,6 @@ class MicroRTSScriptVecEnv(MicroRTSGridModeVecEnv):
         infos = [{"raw_rewards": item} for item in raw_rewards]
 
         return obs, rewards, dones, infos
+
+    def get_action_mask(self):
+        return self.action_mask
