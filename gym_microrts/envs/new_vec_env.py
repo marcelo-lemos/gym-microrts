@@ -403,11 +403,14 @@ class MicroRTSScriptVecEnv(MicroRTSGridModeVecEnv):
         self.utt = json.loads(str(self.render_client.sendUTT()))
 
     def step(self, ac):
-        self.actions = ac
+        self.step_async(ac)
         return self.step_wait()
 
+    def step_async(self, actions):
+        self.actions = actions
+
     def step_wait(self):
-        responses = self.vec_client.gameStep([0 for _ in range(self.num_envs)], self.actions)
+        responses = self.vec_client.gameStep([0 for _ in range(self.num_envs)], self.actions.T[0])
         raw_obs, raw_rewards, dones = np.array(responses.observation), np.array(responses.reward), np.array(
             responses.done)
 
