@@ -8,7 +8,7 @@ env = MicroRTSScriptVecEnv(
     ai2s=[microrts_ai.coacAI],
     max_steps=2000,
     render_theme=2,
-    map_path="maps/16x16/basesWorkers16x16.xml",
+    map_paths=["maps/16x16/basesWorkers16x16.xml"],
     reward_weight=np.array([10.0, 1.0, 1.0, 4.0, 4.0, 4.0, 0.2, 0.2, 1.0])
 )
 
