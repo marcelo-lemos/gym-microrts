@@ -18,7 +18,7 @@ for i in range(10000):
     env.render()
     time.sleep(0.01)
 
-    action = [env.action_space.sample()]
+    action = [[env.action_space.sample()]]
     next_obs, reward, done, info = env.step(action)
 
 env.close()

@@ -407,7 +407,7 @@ class MicroRTSScriptVecEnv(MicroRTSGridModeVecEnv):
         return self.step_wait()
 
     def step_async(self, actions):
-        self.actions = actions
+        self.actions = np.array(actions)
 
     def step_wait(self):
         responses = self.vec_client.gameStep([0 for _ in range(self.num_envs)], self.actions.T[0])
