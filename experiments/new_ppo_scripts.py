@@ -218,7 +218,7 @@ class Agent(nn.Module):
             #     for (logits, iam) in zip(split_logits, split_invalid_action_masks)
             # ]
             # action = torch.stack([categorical.sample() for categorical in multi_categoricals])
-            action = torch.stack([distrib.sample()])
+            action = distrib.sample()
         else:
             # invalid_action_masks = invalid_action_masks.view(-1, invalid_action_masks.shape[-1])
             # action = action.view(-1, action.shape[-1]).T
@@ -235,10 +235,10 @@ class Agent(nn.Module):
         # logprob = logprob.T.view(-1, self.mapsize, num_predicted_parameters)
         # entropy = entropy.T.view(-1, self.mapsize, num_predicted_parameters)
         # action = action.T.view(-1, self.mapsize, num_predicted_parameters)
-        logprob = torch.stack([distrib.log_prob(action)])
-        entropy = torch.stack([distrib.entropy()])
+        logprob = distrib.log_prob(action)
+        entropy = distrib.entropy()
 
-        return action, logprob.sum(1).sum(1), entropy.sum(1), self.critic(hidden)
+        return action, logprob, entropy, self.critic(hidden)
 
     def get_value(self, x):
         return self.critic(self.encoder(x))
@@ -303,7 +303,7 @@ if __name__ == "__main__":
     action_space_shape = (1,)
 
     obs = torch.zeros((args.num_steps, args.num_envs) + envs.observation_space.shape).to(device)
-    actions = torch.zeros((args.num_steps, args.num_envs) + action_space_shape).to(device)
+    actions = torch.zeros((args.num_steps, args.num_envs)).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -361,8 +361,7 @@ if __name__ == "__main__":
                 action, logproba, _, vs = agent.get_action_and_value(next_obs)
                 values[step] = vs.flatten()
 
-            # todo: transposing here may alter something, i dont know
-            actions[step] = action.T
+            actions[step] = action
             logprobs[step] = logproba
             try:
                 next_obs, rs, ds, infos = envs.step(action.cpu().numpy().reshape(envs.num_envs, -1))
