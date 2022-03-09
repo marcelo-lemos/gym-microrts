@@ -300,7 +300,7 @@ if __name__ == "__main__":
     mapsize = 16 * 16
     # action_space_shape = (mapsize, len(envs.action_plane_space.nvec))
     # invalid_action_shape = (mapsize, envs.action_plane_space.nvec.sum())
-    action_space_shape = (1,)
+    action_space_shape = tuple()
 
     obs = torch.zeros((args.num_steps, args.num_envs) + envs.observation_space.shape).to(device)
     actions = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -410,7 +410,7 @@ if __name__ == "__main__":
         # flatten the batch
         b_obs = obs.reshape((-1,) + envs.observation_space.shape)
         b_logprobs = logprobs.reshape(-1)
-        b_actions = actions.reshape((-1,) + action_space_shape)
+        b_actions = actions.reshape((-1,))
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
         b_values = values.reshape(-1)
