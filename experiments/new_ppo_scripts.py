@@ -380,7 +380,7 @@ if __name__ == "__main__":
                     for key in info["microrts_stats"]:
                         run.log({f"rewards/{key}": info["microrts_stats"][key]}, step=global_step)
 
-                    hist, _ = np.histogram(actions.cpu().flatten(), range(0, 6))
+                    hist, _ = np.histogram(actions.cpu().flatten(), range(0, 7))
                     hist = hist / sum(hist)
                     scripts = ["workerRush", "lightRush", "rangedRush", "heavyRush", "expand", "buildBarracks"]
 
