@@ -260,7 +260,7 @@ if __name__ == "__main__":
             monitor_gym=True,
             save_code=True,
         )
-        CHECKPOINT_FREQUENCY = 50
+        CHECKPOINT_FREQUENCY = 1_000_000 // args.batch_size
 
     # TRY NOT TO MODIFY: seeding
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
@@ -479,8 +479,8 @@ if __name__ == "__main__":
         if args.prod_mode:
             # make sure to tune `CHECKPOINT_FREQUENCY` so models are not saved too frequently
             if update % CHECKPOINT_FREQUENCY == 0:
-                torch.save(agent.state_dict(), f"{wandb.run.dir}/agent.pt")
-                wandb.save(f"{wandb.run.dir}/agent.pt", policy="now")
+                torch.save(agent.state_dict(), f"{wandb.run.dir}/agent-{update}.pt")
+                wandb.save(f"{wandb.run.dir}/agent-{update}.pt", policy="now")
                 print("model saved")
 
         # TRY NOT TO MODIFY: record rewards for plotting purposes
