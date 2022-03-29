@@ -15,7 +15,7 @@ from gym_microrts import microrts_ai
 from gym_microrts.envs.new_vec_env import MicroRTSGridModeVecEnv
 from stable_baselines3.common.vec_env import VecEnvWrapper, VecMonitor, VecVideoRecorder
 from torch.distributions.categorical import Categorical
-from torch.utils.tensorboard import SummaryWriter
+
 from new_ppo_gridnet import Agent, MicroRTSStatsRecorder
 
 
@@ -46,7 +46,7 @@ def parse_args():
         help="the entity (team) of wandb's project")
 
     # Algorithm specific arguments
-    parser.add_argument('--partial-obs', type=lambda x: bool(strtobool(x)), default=True, nargs='?', const=True,
+    parser.add_argument('--partial-obs', type=lambda x: bool(strtobool(x)), default=False, nargs='?', const=True,
         help='if toggled, the game will have partial observability')
     parser.add_argument('--n-minibatch', type=int, default=4,
         help='the number of mini batch')
@@ -56,9 +56,9 @@ def parse_args():
         help='the number of self play envs; 16 self play envs means 8 games')
     parser.add_argument('--num-steps', type=int, default=256,
         help='the number of steps per game environment')
-    parser.add_argument("--agent-model-path", type=str, default="POagent.pt",
+    parser.add_argument("--agent-model-path", type=str, default="agent.pt",
         help="the path to the agent's model")
-    parser.add_argument('--ai', type=str, default="POHeavyRush",
+    parser.add_argument('--ai', type=str, default="lightRushAI",
         help='the number of steps per game environment')
 
     args = parser.parse_args()
@@ -79,20 +79,16 @@ if __name__ == "__main__":
         run = wandb.init(
             project=args.wandb_project_name,
             entity=args.wandb_entity,
-            sync_tensorboard=True,
             config=vars(args),
             name=experiment_name,
             monitor_gym=True,
             save_code=True,
         )
         CHECKPOINT_FREQUENCY = 10
-    writer = SummaryWriter(f"runs/{experiment_name}")
-    writer.add_text(
-        "hyperparameters", "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()]))
-    )
 
     # TRY NOT TO MODIFY: seeding
-    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -101,6 +97,7 @@ if __name__ == "__main__":
     ais = []
     if args.ai:
         ais = [eval(f"microrts_ai.{args.ai}")]
+        print(ais)
     envs = MicroRTSGridModeVecEnv(
         num_bot_envs=len(ais),
         num_selfplay_envs=args.num_selfplay_envs,
@@ -108,8 +105,8 @@ if __name__ == "__main__":
         max_steps=5000,
         render_theme=2,
         ai2s=ais,
-        map_path="maps/16x16/basesWorkers16x16A.xml",
-        reward_weight=np.array([10.0, 1.0, 1.0, 0.2, 1.0, 4.0]),
+        map_paths=["maps/16x16/basesWorkers16x16A.xml"],
+        reward_weight=np.array([10.0, 1.0, 1.0, 4.0, 4.0, 4.0, 0.2, 0.2, 1.0]),
     )
     envs = MicroRTSStatsRecorder(envs)
     envs = VecMonitor(envs)
@@ -118,7 +115,8 @@ if __name__ == "__main__":
         envs = VecVideoRecorder(
             envs, f"videos/{experiment_name}", record_video_trigger=lambda x: x % 100000 == 0, video_length=2000
         )
-    assert isinstance(envs.action_space, MultiDiscrete), "only MultiDiscrete action space is supported"
+    assert isinstance(
+        envs.action_space, MultiDiscrete), "only MultiDiscrete action space is supported"
 
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
@@ -128,13 +126,16 @@ if __name__ == "__main__":
     action_space_shape = (mapsize, len(envs.action_plane_space.nvec))
     invalid_action_shape = (mapsize, envs.action_plane_space.nvec.sum())
 
-    obs = torch.zeros((args.num_steps, args.num_envs) + envs.observation_space.shape).to(device)
-    actions = torch.zeros((args.num_steps, args.num_envs) + action_space_shape).to(device)
+    obs = torch.zeros((args.num_steps, args.num_envs) +
+                      envs.observation_space.shape).to(device)
+    actions = torch.zeros((args.num_steps, args.num_envs) +
+                          action_space_shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
     values = torch.zeros((args.num_steps, args.num_envs)).to(device)
-    invalid_action_masks = torch.zeros((args.num_steps, args.num_envs) + invalid_action_shape).to(device)
+    invalid_action_masks = torch.zeros(
+        (args.num_steps, args.num_envs) + invalid_action_shape).to(device)
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
@@ -144,7 +145,7 @@ if __name__ == "__main__":
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = 10000
 
-    ## CRASH AND RESUME LOGIC:
+    # CRASH AND RESUME LOGIC:
     starting_update = 1
     agent.load_state_dict(torch.load(args.agent_model_path))
     agent.eval()
@@ -164,21 +165,25 @@ if __name__ == "__main__":
             dones[step] = next_done
             # ALGO LOGIC: put action logic here
             with torch.no_grad():
-                invalid_action_masks[step] = torch.tensor(np.array(envs.get_action_mask())).to(device)
+                invalid_action_masks[step] = torch.tensor(
+                    np.array(envs.get_action_mask())).to(device)
                 action, logproba, _, _, vs = agent.get_action_and_value(
-                    next_obs, envs=envs, invalid_action_masks=invalid_action_masks[step], device=device
+                    next_obs, envs=envs, invalid_action_masks=invalid_action_masks[
+                        step], device=device
                 )
                 values[step] = vs.flatten()
 
             actions[step] = action
             logprobs[step] = logproba
             try:
-                next_obs, rs, ds, infos = envs.step(action.cpu().numpy().reshape(envs.num_envs, -1))
+                next_obs, rs, ds, infos = envs.step(
+                    action.cpu().numpy().reshape(envs.num_envs, -1))
                 next_obs = torch.Tensor(next_obs).to(device)
             except Exception as e:
                 e.printStackTrace()
                 raise
-            rewards[step], next_done = torch.Tensor(rs).to(device), torch.Tensor(ds).to(device)
+            rewards[step], next_done = torch.Tensor(
+                rs).to(device), torch.Tensor(ds).to(device)
 
             for info in infos:
                 if "episode" in info.keys():
@@ -188,12 +193,12 @@ if __name__ == "__main__":
                     #     writer.add_scalar(f"charts/episode_reward/{key}", info["microrts_stats"][key], global_step)
                     # break
 
-                    print("against", args.ai, info["microrts_stats"]["WinLossRewardFunction"])
+                    print("against", args.ai,
+                          info["microrts_stats"]["WinLossRewardFunction"])
 
         # TRY NOT TO MODIFY: record rewards for plotting purposes
-        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
-        writer.add_scalar("charts/update", update, global_step)
-        writer.add_scalar("charts/sps", int(global_step / (time.time() - start_time)), global_step)
+        run.log({"charts/learning_rate": optimizer.param_groups[0]["lr"], "charts/update": update, "charts/sps": int(
+            global_step / (time.time() - start_time))}, step=global_step)
 
     # envs.close()
     # writer.close()
