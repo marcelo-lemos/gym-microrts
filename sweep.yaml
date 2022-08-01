@@ -1,13 +1,13 @@
-program: experiments/new_ppo_gridnet.py
+program: experiments/new_ppo_scripts.py
 method: grid
 parameters:
   num-selfplay-envs:
     value: 0
   num-bot-envs:
-    value: 4
+    value: 1
   prod-mode:
     value: "true"
   seed:
-    values: [1, 2, 3]
+    values: [123, 456, 789]
   total-timesteps:
-    value: 30000000
+    value: 3000000
